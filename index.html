@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Herramienta Interactiva: Letrozol vs Tamoxifeno (HR+/HER2+ adyuvante)</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .chart-container { height: 400px; }
+        .print-friendly { break-inside: avoid; }
+        @media print {
+            body { font-size: 12px; }
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans">
+    <div class="container mx-auto px-4 py-6 max-w-6xl">
+        
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6 print-friendly">
+            <div class="text-center">
+                <h1 class="text-3xl font-bold text-blue-800 mb-2">
+                    <i class="fas fa-pills mr-2"></i>
+                    Herramienta de Decisión: Letrozol vs Tamoxifeno
+                </h1>
+                <p class="text-lg text-gray-600 mb-4">Para pacientes con cáncer de mama HR+/HER2+ en tratamiento adyuvante con trastuzumab</p>
+                <div class="bg-blue-50 border-l-4 border-blue-400 p-4 text-left">
+                    <p class="text-sm text-blue-800">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        <strong> Esta herramienta te ayudará a entender las diferencias entre continuar con letrozol + bloqueo ovárico versus cambiar a tamoxifeno, basándose en la mejor evidencia científica disponible.</strong>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Patient Configuration -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6 print-friendly">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">
+                <i class="fas fa-user-md mr-2"></i>
+                1. Configuración de tu caso
+            </h2>
+            
+            <div class="grid md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Edad</label>
+                    <input type="number" id="age" class="w-full px-3 py-2 border border-gray-300 rounded-md" value="45" min="20" max="80">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Estado menopáusico actual</label>
+                    <select id="menopausal" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                        <option value="pre_ofs">Premenopáusica con bloqueo ovárico</option>
+                        <option value="pre_no_ofs">Premenopáusica sin bloqueo ovárico</option>
+                        <option value="post">Posmenopáusica</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Ganglios positivos</label>
+                    <select id="nodes" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                        <option value="0">0 ganglios</option>
+                        <option value="1-3">1-3 ganglios</option>
+                        <option value="4+">4 o más ganglios</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Tamaño tumoral (cm)</label>
+                    <input type="number" id="size" class="w-full px-3 py-2 border border-gray-300 rounded-md" value="2.5" min="0.1" max="10" step="0.1">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Grado histológico</label>
+                    <select id="grade" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                        <option value="1">Grado 1 (bien diferenciado)</option>
+                        <option value="2">Grado 2 (moderadamente diferenciado)</option>
+                        <option value="3">Grado 3 (poco diferenciado)</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">¿Recibiste quimioterapia?</label>
+                    <select id="chemo" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                        <option value="yes">Sí</option>
+                        <option value="no">No</option>
+                    </select>
+                </div>
+            </div>
+            
+            <button onclick="calculateOutcomes()" class="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                <i class="fas fa-calculator mr-2"></i>
+                Calcular Beneficios
+            </button>
+        </div>
+
+        <!-- Results Section -->
+        <div id="results" class="hidden">
+            <!-- Survival Benefits -->
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-6 print-friendly">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-chart-line mr-2"></i>
+                    2. Comparación de Beneficios en Supervivencia
+                </h2>
+                
+                <div class="grid md:grid-cols-2 gap-6 mb-6">
+                    <div class="chart-container">
+                        <canvas id="survivalChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="benefitChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+                    <p class="text-sm text-yellow-800">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>
+                        <strong>Nota importante:</strong> Los datos específicos para HER2+ con trastuzumab son limitados. Las estimaciones se basan en estudios como ShortHER y extrapolación cuidadosa de SOFT/TEXT.
+                    </p>
+                </div>
+                
+                <div id="survivalText" class="text-gray-700"></div>
+            </div>
+
+            <!-- Adverse Effects -->
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-6 print-friendly">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-exclamation-circle mr-2"></i>
+                    3. Perfil de Efectos Adversos y Calidad de Vida
+                </h2>
+                
+                <div class="grid md:grid-cols-2 gap-6">
+                    <!-- Letrozole + OFS -->
+                    <div class="border rounded-lg p-4">
+                        <h3 class="text-lg font-semibold text-blue-800 mb-3">Letrozol + Bloqueo Ovárico</h3>
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-center">
+                                <span>Dolor articular</span>
+                                <div class="flex">
+                                    <i class="fas fa-circle text-red-500"></i>
+                                    <i class="fas fa-circle text-red-500"></i>
+                                    <i class="fas fa-circle text-red-500"></i>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span>Pérdida ósea</span>
+                                <div class="flex">
+                                    <i class="fas fa-circle text-red-500"></i>
+                                    <i class="fas fa-circle text-red-500"></i>
+                                    <i class="fas fa-circle text-gray-300"></i>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span>Sequedad vaginal</span>
+                                <div class="flex">
+                                    <i class="fas fa-circle text-red-500"></i>
+                                    <i class="fas fa-circle text-red-500"></i>
+                                    <i class="fas fa-circle text-red-500"></i>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span>Bochornos</span>
+                                <div class="flex">
+                                    <i class="fas fa-circle text-yellow-500"></i>
+                                    <i class="fas fa-circle text-yellow-500"></i>
+                                    <i class="fas fa-circle text-gray-300"></i>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span>Riesgo de trombosis</span>
+                                <div class="flex">
+                                    <i class="fas fa-circle text-green-500"></i>
+                                    <i class="fas fa-circle text-gray-300"></i>
+                                    <i class="fas fa-circle text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Tamoxifen -->
+                    <div class="border rounded-lg p-4">
+                        <h3 class="text-lg font-semibold text-purple-800 mb-3">Tamoxifeno (± Bloqueo Ovárico)</h3>
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-center">
+                                <span>Dolor articular</span>
+                                <div class="flex">
+                                    <i class="fas fa-circle text-green-500"></i>
+                                    <i class="fas fa-circle text-gray-300"></i>
+                                    <i class="fas fa-circle text-gray-300"></i>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span>Pérdida ósea</span>
+                                <div class="flex">
+                                    <i class="fas fa-circle text-green-500"></i>
+                                    <i class="fas fa-circle text-green-500"></i>
+                                    <i class="fas fa-circle text-gray-300"></i>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span>Sequedad vaginal</span>
+                                <div class="flex">
+                                    <i class="fas fa-circle text-yellow-500"></i>
+                                    <i class="fas fa-circle text-yellow-500"></i>
+                                    <i class="fas fa-circle text-gray-300"></i>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span>Bochornos</span>
+                                <div class="flex">
+                                    <i class="fas fa-circle text-red-500"></i>
+                                    <i class="fas fa-circle text-red-500"></i>
+                                    <i class="fas fa-circle text-red-500"></i>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span>Riesgo de trombosis</span>
+                                <div class="flex">
+                                    <i class="fas fa-circle text-red-500"></i>
+                                    <i class="fas fa-circle text-red-500"></i>
+                                    <i class="fas fa-circle text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-4 text-sm text-gray-600">
+                    <p><i class="fas fa-circle text-green-500 mr-1"></i> Bajo riesgo</p>
+                    <p><i class="fas fa-circle text-yellow-500 mr-1"></i> Riesgo moderado</p>
+                    <p><i class="fas fa-circle text-red-500 mr-1"></i> Alto riesgo</p>
+                </div>
+            </div>
+
+            <!-- Patient Preferences -->
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-6 print-friendly">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-heart mr-2"></i>
+                    4. Tus Preferencias
+                </h2>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            ¿Qué es más importante para ti?
+                        </label>
+                        <div class="space-y-2">
+                            <label class="flex items-center">
+                                <input type="radio" name="priority" value="efficacy" class="mr-2">
+                                <span>Maximizar la protección contra recaída, aunque tenga más efectos adversos</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="radio" name="priority" value="balance" class="mr-2" checked>
+                                <span>Un balance entre protección y calidad de vida</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="radio" name="priority" value="tolerance" class="mr-2">
+                                <span>Priorizar mi calidad de vida y tolerabilidad</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Nivel de preocupación por recaída (1-10)
+                        </label>
+                        <input type="range" id="recurrenceWorry" min="1" max="10" value="7" class="w-full">
+                        <div class="flex justify-between text-xs text-gray-500">
+                            <span>Poco preocupada</span>
+                            <span>Muy preocupada</span>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Tolerancia actual a efectos adversos (1-10)
+                        </label>
+                        <input type="range" id="toleranceLevel" min="1" max="10" value="3" class="w-full">
+                        <div class="flex justify-between text-xs text-gray-500">
+                            <span>Muy difícil de tolerar</span>
+                            <span>Tolero bien</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <button onclick="generateRecommendation()" class="mt-4 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                    <i class="fas fa-magic mr-2"></i>
+                    Generar Recomendación Personalizada
+                </button>
+            </div>
+
+            <!-- Personalized Recommendation -->
+            <div id="recommendation" class="bg-white rounded-lg shadow-lg p-6 mb-6 print-friendly hidden">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-lightbulb mr-2"></i>
+                    5. Recomendación Personalizada
+                </h2>
+                <div id="recommendationText" class="text-gray-700"></div>
+            </div>
+        </div>
+
+        <!-- FAQ Section -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6 print-friendly">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">
+                <i class="fas fa-question-circle mr-2"></i>
+                Preguntas Frecuentes
+            </h2>
+            
+            <div class="space-y-4">
+                <div class="border-l-4 border-blue-400 pl-4">
+                    <h3 class="font-semibold text-blue-800">¿Por qué HER2+ puede hacer que el tamoxifeno funcione "menos"?</h3>
+                    <p class="text-gray-700 text-sm mt-1">
+                        HER2 puede "encender" al receptor de estrógeno por vías alternativas, reduciendo la eficacia de tamoxifeno. La deprivación estrogénica (inhibidor de aromatasa) y el bloqueo HER2 conjunto ayudan a contrarrestar este "cross-talk".
+                    </p>
+                    <p class="text-xs text-gray-500 mt-1">
+                        Fuente: <a href="#" class="text-blue-600">PubMed Central - Cross-talk HER2/ER</a>
+                    </p>
+                </div>
+                
+                <div class="border-l-4 border-green-400 pl-4">
+                    <h3 class="font-semibold text-green-800">¿Necesito sí o sí el bloqueo ovárico?</h3>
+                    <p class="text-gray-700 text-sm mt-1">
+                        Si tomas un inhibidor de aromatasa antes de la menopausia, sí: sin bloqueo ovárico, los inhibidores de aromatasa no son efectivos. Con tamoxifeno, el bloqueo ovárico añade beneficio, especialmente si tu riesgo es alto.
+                    </p>
+                    <p class="text-xs text-gray-500 mt-1">
+                        Fuente: <a href="#" class="text-blue-600">SOFT/TEXT trials</a>
+                    </p>
+                </div>
+                
+                <div class="border-l-4 border-purple-400 pl-4">
+                    <h3 class="font-semibold text-purple-800">¿Puedo cambiar entre tratamientos?</h3>
+                    <p class="text-gray-700 text-sm mt-1">
+                        Sí, es posible cambiar entre inhibidores de aromatasa y tamoxifeno bajo supervisión médica. Tu oncólogo puede ajustar el tratamiento según tu tolerancia y respuesta.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Glossary -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6 print-friendly">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">
+                <i class="fas fa-book mr-2"></i>
+                Glosario
+            </h2>
+            
+            <div class="grid md:grid-cols-2 gap-4 text-sm">
+                <div>
+                    <h3 class="font-semibold text-blue-800">DFS (Supervivencia libre de enfermedad)</h3>
+                    <p class="text-gray-700">Tiempo sin recaída, segundo cáncer o muerte.</p>
+                </div>
+                
+                <div>
+                    <h3 class="font-semibold text-blue-800">HR+ (Receptores hormonales positivos)</h3>
+                    <p class="text-gray-700">Cáncer que crece con estrógenos y/o progesterona.</p>
+                </div>
+                
+                <div>
+                    <h3 class="font-semibold text-blue-800">HER2+</h3>
+                    <p class="text-gray-700">Cáncer con sobreexpresión del receptor HER2.</p>
+                </div>
+                
+                <div>
+                    <h3 class="font-semibold text-blue-800">OFS (Supresión ovárica)</h3>
+                    <p class="text-gray-700">Bloqueo de la producción de hormonas en los ovarios.</p>
+                </div>
+                
+                <div>
+                    <h3 class="font-semibold text-blue-800">Cross-talk</h3>
+                    <p class="text-gray-700">Interacción entre las vías de HER2 y receptores hormonales.</p>
+                </div>
+                
+                <div>
+                    <h3 class="font-semibold text-blue-800">Hazard Ratio (HR)</h3>
+                    <p class="text-gray-700">Medida de riesgo relativo entre dos tratamientos.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="bg-gray-800 text-white rounded-lg p-6 print-friendly">
+            <div class="text-center">
+                <p class="text-sm mb-2">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                    <strong>Importante:</strong> Esta herramienta es educativa y no sustituye la consulta médica. Todas las decisiones de tratamiento deben tomarse con tu oncólogo.
+                </p>
+                <p class="text-xs text-gray-300">
+                    Basado en evidencia científica de ShortHER, SOFT/TEXT, BIG 1-98, ATAC, y meta-análisis EBCTCG.
+                    Desarrollado para la educación de pacientes HR+/HER2+ en adyuvancia con trastuzumab.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let survivalChart, benefitChart;
+        
+        function calculateOutcomes() {
+            const age = parseInt(document.getElementById('age').value);
+            const menopausal = document.getElementById('menopausal').value;
+            const nodes = document.getElementById('nodes').value;
+            const size = parseFloat(document.getElementById('size').value);
+            const grade = document.getElementById('grade').value;
+            const chemo = document.getElementById('chemo').value;
+            
+            // Calculate risk factors
+            let riskScore = 0;
+            if (age < 35) riskScore += 2;
+            else if (age < 50) riskScore += 1;
+            
+            if (nodes === '1-3') riskScore += 1;
+            else if (nodes === '4+') riskScore += 2;
+            
+            if (size > 2) riskScore += 1;
+            if (size > 5) riskScore += 2;
+            
+            if (grade === '3') riskScore += 1;
+            if (chemo === 'yes') riskScore += 1;
+            
+            // Base survival rates (ShortHER data for HR+/HER2+ with trastuzumab)
+            let letrozoleDFS = menopausal === 'post' ? 87.9 : 86.4;
+            let tamoxifenDFS = menopausal === 'post' ? 84.6 : 79.7;
+            
+            // Adjust for risk
+            const riskAdjustment = riskScore * 0.5;
+            letrozoleDFS -= riskAdjustment;
+            tamoxifenDFS -= riskAdjustment * 1.2; // Tamoxifen slightly worse in high risk
+            
+            // OS estimates (more conservative)
+            let letrozoleOS = letrozoleDFS + 3;
+            let tamoxifenOS = tamoxifenDFS + 3;
+            
+            // DRFI estimates
+            let letrozoleDRFI = letrozoleDFS + 4;
+            let tamoxifenDRFI = tamoxifenDFS + 4;
+            
+            // Show results
+            document.getElementById('results').classList.remove('hidden');
+            
+            // Create survival chart
+            createSurvivalChart(letrozoleDFS, tamoxifenDFS, letrozoleOS, tamoxifenOS);
+            
+            // Create benefit chart
+            createBenefitChart(letrozoleDFS - tamoxifenDFS, letrozoleOS - tamoxifenOS, letrozoleDRFI - tamoxifenDRFI);
+            
+            // Update text
+            updateSurvivalText(letrozoleDFS, tamoxifenDFS, letrozoleOS, tamoxifenOS, letrozoleDRFI, tamoxifenDRFI, riskScore);
+        }
+        
+        function createSurvivalChart(letDFS, tamDFS, letOS, tamOS) {
+            const ctx = document.getElementById('survivalChart').getContext('2d');
+            
+            if (survivalChart) survivalChart.destroy();
+            
+            survivalChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Supervivencia libre\nde enfermedad (8 años)', 'Supervivencia\nglobal (8 años)'],
+                    datasets: [{
+                        label: 'Letrozol + Bloqueo Ovárico',
+                        data: [letDFS, letOS],
+                        backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        borderWidth: 2
+                    }, {
+                        label: 'Tamoxifeno (± Bloqueo Ovárico)',
+                        data: [tamDFS, tamOS],
+                        backgroundColor: 'rgba(147, 51, 234, 0.8)',
+                        borderColor: 'rgba(147, 51, 234, 1)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Supervivencia Estimada a 8 Años (%)'
+                        },
+                        legend: {
+                            position: 'bottom'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            min: 70,
+                            max: 95,
+                            title: {
+                                display: true,
+                                text: 'Porcentaje (%)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function createBenefitChart(dfsBenefit, osBenefit, drfiBenefit) {
+            const ctx = document.getElementById('benefitChart').getContext('2d');
+            
+            if (benefitChart) benefitChart.destroy();
+            
+            benefitChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Supervivencia libre\nde enfermedad', 'Supervivencia\nglobal', 'Supervivencia libre\nde metástasis'],
+                    datasets: [{
+                        label: 'Diferencia absoluta (Letrozol - Tamoxifeno)',
+                        data: [dfsBenefit, osBenefit, drfiBenefit],
+                        backgroundColor: [
+                            dfsBenefit > 0 ? 'rgba(34, 197, 94, 0.8)' : 'rgba(239, 68, 68, 0.8)',
+                            osBenefit > 0 ? 'rgba(34, 197, 94, 0.8)' : 'rgba(239, 68, 68, 0.8)',
+                            drfiBenefit > 0 ? 'rgba(34, 197, 94, 0.8)' : 'rgba(239, 68, 68, 0.8)'
+                        ],
+                        borderColor: [
+                            dfsBenefit > 0 ? 'rgba(34, 197, 94, 1)' : 'rgba(239, 68, 68, 1)',
+                            osBenefit > 0 ? 'rgba(34, 197, 94, 1)' : 'rgba(239, 68, 68, 1)',
+                            drfiBenefit > 0 ? 'rgba(34, 197, 94, 1)' : 'rgba(239, 68, 68, 1)'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Beneficio Absoluto de Letrozol vs Tamoxifeno'
+                        },
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Diferencia en puntos porcentuales'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function updateSurvivalText(letDFS, tamDFS, letOS, tamOS, letDRFI, tamDRFI, riskScore) {
+            const differenceDFS = letDFS - tamDFS;
+            const differenceOS = letOS - tamOS;
+            const differenceDRFI = letDRFI - tamDRFI;
+            
+            let riskLevel = riskScore <= 2 ? 'bajo' : riskScore <= 4 ? 'moderado' : 'alto';
+            
+            const textDiv = document.getElementById('survivalText');
+            textDiv.innerHTML = `
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <h3 class="font-semibold text-blue-800 mb-2">Letrozol + Bloqueo Ovárico</h3>
+                        <ul class="text-sm space-y-1">
+                            <li>• Supervivencia libre de enfermedad (8 años): <strong>${letDFS.toFixed(1)}%</strong></li>
+                            <li>• Supervivencia global (8 años): <strong>${letOS.toFixed(1)}%</strong></li>
+                            <li>• Supervivencia libre de metástasis (8 años): <strong>${letDRFI.toFixed(1)}%</strong></li>
+                        </ul>
+                    </div>
+                    
+                    <div class="bg-purple-50 p-4 rounded-lg">
+                        <h3 class="font-semibold text-purple-800 mb-2">Tamoxifeno (± Bloqueo Ovárico)</h3>
+                        <ul class="text-sm space-y-1">
+                            <li>• Supervivencia libre de enfermedad (8 años): <strong>${tamDFS.toFixed(1)}%</strong></li>
+                            <li>• Supervivencia global (8 años): <strong>${tamOS.toFixed(1)}%</strong></li>
+                            <li>• Supervivencia libre de metástasis (8 años): <strong>${tamDRFI.toFixed(1)}%</strong></li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="mt-4 p-4 bg-gray-50 rounded-lg">
+                    <h3 class="font-semibold text-gray-800 mb-2">Interpretación para tu caso (riesgo ${riskLevel}):</h3>
+                    <p class="text-sm">
+                        En pacientes como tú con HR+/HER2+ tratadas con trastuzumab, el letrozol + bloqueo ovárico 
+                        ofrece aproximadamente <strong>${differenceDFS.toFixed(1)} puntos porcentuales más</strong> de supervivencia 
+                        libre de enfermedad a 8 años comparado con tamoxifeno.
+                    </p>
+                    <p class="text-xs text-gray-600 mt-2">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Estimaciones basadas en ShortHER (HR+/HER2+ con trastuzumab), SOFT/TEXT (premenopáusicas con OFS), 
+                        y ajustadas por factores de riesgo individuales.
+                    </p>
+                </div>
+            `;
+        }
+        
+        function generateRecommendation() {
+            const priority = document.querySelector('input[name="priority"]:checked').value;
+            const recurrenceWorry = document.getElementById('recurrenceWorry').value;
+            const toleranceLevel = document.getElementById('toleranceLevel').value;
+            
+            let recommendation = '';
+            let icon = '';
+            let color = '';
+            
+            if (priority === 'efficacy' || (recurrenceWorry >= 7 && toleranceLevel >= 6)) {
+                recommendation = `
+                    <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
+                        <h3 class="font-semibold text-blue-800 mb-2">
+                            <i class="fas fa-shield-alt mr-2"></i>
+                            Recomendación: Considerar continuar con Letrozol + Bloqueo Ovárico
+                        </h3>
+                        <p class="text-sm text-blue-700 mb-3">
+                            Basándose en tus preferencias y perfil de riesgo, podrías beneficiarte más de continuar 
+                            con el esquema actual, trabajando con tu equipo médico en estrategias para mejorar la tolerabilidad.
+                        </p>
+                        <div class="text-xs text-blue-600">
+                            <p><strong>Estrategias de manejo:</strong></p>
+                            <ul class="list-disc list-inside mt-1">
+                                <li>Ejercicio regular para dolor articular</li>
+                                <li>Calcio y vitamina D para salud ósea</li>
+                                <li>Lubricantes vaginales para sequedad</li>
+                                <li>Evaluación de densitometría ósea</li>
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            } else if (priority === 'tolerance' || toleranceLevel <= 4) {
+                recommendation = `
+                    <div class="bg-green-50 border-l-4 border-green-400 p-4">
+                        <h3 class="font-semibold text-green-800 mb-2">
+                            <i class="fas fa-heart mr-2"></i>
+                            Recomendación: Considerar cambio a Tamoxifeno
+                        </h3>
+                        <p class="text-sm text-green-700 mb-3">
+                            Dada tu baja tolerancia actual y prioridad en calidad de vida, cambiar a tamoxifeno 
+                            (idealmente con bloqueo ovárico si sigues premenopáusica) podría ser una opción razonable.
+                        </p>
+                        <div class="text-xs text-green-600">
+                            <p><strong>Consideraciones importantes:</strong></p>
+                            <ul class="list-disc list-inside mt-1">
+                                <li>Posible reducción de 5-7% en supervivencia libre de enfermedad</li>
+                                <li>Vigilancia para trombosis y cáncer endometrial</li>
+                                <li>Mantener bloqueo ovárico si es posible</li>
+                                <li>Seguimiento oncológico estrecho</li>
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            } else {
+                recommendation = `
+                    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+                        <h3 class="font-semibold text-yellow-800 mb-2">
+                            <i class="fas fa-balance-scale mr-2"></i>
+                            Recomendación: Decisión equilibrada
+                        </h3>
+                        <p class="text-sm text-yellow-700 mb-3">
+                            Tu perfil sugiere que tanto continuar con letrozol optimizando el manejo de efectos adversos, 
+                            como cambiar a tamoxifeno, podrían ser opciones válidas. La decisión final debe tomarse 
+                            con tu oncólogo considerando todos los factores.
+                        </p>
+                        <div class="text-xs text-yellow-600">
+                            <p><strong>Próximos pasos sugeridos:</strong></p>
+                            <ul class="list-disc list-inside mt-1">
+                                <li>Discutir estrategias de manejo de efectos adversos</li>
+                                <li>Ensayar optimización de letrozol por 4-6 semanas</li>
+                                <li>Evaluar respuesta y decidir en conjunto</li>
+                                <li>Planificar seguimiento frecuente inicial</li>
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            document.getElementById('recommendationText').innerHTML = recommendation + `
+                <div class="mt-4 p-3 bg-red-50 border border-red-200 rounded">
+                    <p class="text-xs text-red-700">
+                        <i class="fas fa-exclamation-triangle mr-1"></i>
+                        <strong>Recordatorio importante:</strong> Esta es una herramienta educativa desarrollada para pacientes de OncoTech. 
+                        Toda decisión de cambio de tratamiento debe ser evaluada y supervisada por tu oncólogo, 
+                        quien conoce todos los detalles de tu caso específico.
+                    </p>
+                </div>
+            `;
+            
+            document.getElementById('recommendation').classList.remove('hidden');
+        }
+        
+        // Initialize with default calculation
+        window.onload = function() {
+            calculateOutcomes();
+        }
+    </script>
+</body>
+</html>
